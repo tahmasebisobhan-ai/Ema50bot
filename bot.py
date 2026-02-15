@@ -1,7 +1,7 @@
 import requests
 
 # -----------------------------
-# تنظیمات تلگرام (اینجا توکن و Chat ID واقعی خودت)
+# تنظیمات تلگرام (توکن و chat_id واقعی خودت)
 # -----------------------------
 BOT_TOKEN = "8546173398:AAEDnGYPuKKhWATYnZ8cbzFe3Q7kJ2AnkUQ"
 CHAT_ID = 161280400
@@ -10,7 +10,7 @@ def send_telegram(msg):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     data = {"chat_id": CHAT_ID, "text": msg}
     try:
-        requests.post(url, data=data, timeout=10)  # timeout افزایش یافت
+        requests.post(url, data=data, timeout=10)
     except Exception as e:
         print("Telegram ERROR:", e)
 
@@ -34,40 +34,45 @@ def ema50(prices):
     return ema
 
 # -----------------------------
-# پیام تست فوری برای اطمینان از فعال بودن ربات
+# تایم فریم ها
 # -----------------------------
-send_telegram("✅ ربات GitHub فعال شد و پیام تست ارسال شد!")
+timeframes = ["5min", "15min"]
 
 # -----------------------------
-# پردازش هر ارز
+# پردازش هر ارز و تایم فریم
 # -----------------------------
 for symbol in pairs:
-    try:
-        url = f"https://api.lbank.info/v2/kline.do?symbol={symbol}&type=5min&size=80"
-        res = requests.get(url, timeout=10).json()
-        data = res["data"]
+    for tf in timeframes:
+        try:
+            url = f"https://api.lbank.info/v2/kline.do?symbol={symbol}&type={tf}&size=80"
+            res = requests.get(url, timeout=10).json()
+            data = res["data"]
 
-        closes = [float(c[2]) for c in data]   # close
-        highs  = [float(c[3]) for c in data]   # high
-        lows   = [float(c[4]) for c in data]   # low
+            closes = [float(c[2]) for c in data]   # close
+            highs  = [float(c[3]) for c in data]   # high
+            lows   = [float(c[4]) for c in data]   # low
 
-        ema = ema50(closes)
-        last_close = closes[-1]
-        prev_close = closes[-2]
-        last_high = highs[-1]
-        last_low = lows[-1]
+            ema = ema50(closes)
+            last_close = closes[-1]
+            last_high = highs[-1]
+            last_low = lows[-1]
 
-        # کراس رو به بالا
-        if prev_close < ema and last_close > ema:
-            send_telegram(f"🔼 کراس رو به بالا EMA50\n{symbol.upper()}\nClose: {last_close}")
+            # -------------------------
+            # اگر قیمت **به EMA برخورد کرده باشد**:
+            # 1) کلوز بالای EMA باشد
+            # 2) shadow شامل EMA باشد
+            # 3) یا EMA بین close قبلی و آخر باشد
+            # -------------------------
+            prev_close = closes[-2]
+            touched = False
 
-        # کراس رو به پایین
-        if prev_close > ema and last_close < ema:
-            send_telegram(f"🔽 کراس رو به پایین EMA50\n{symbol.upper()}\nClose: {last_close}")
+            if last_low <= ema <= last_high:
+                touched = True
+            elif (prev_close - ema) * (last_close - ema) <= 0:
+                touched = True
 
-        # برخورد ساده (shadow)
-        if last_low <= ema <= last_high:
-            send_telegram(f"⚡ برخورد با EMA50\n{symbol.upper()}\nClose: {last_close}")
+            if touched:
+                send_telegram(f"⚡ برخورد با EMA50\n{symbol.upper()} | تایم فریم: {tf}\nClose: {last_close}")
 
-    except Exception as e:
-        print("ERROR:", symbol, e)
+        except Exception as e:
+            print("ERROR:", symbol, tf, e)
