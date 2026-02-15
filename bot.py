@@ -24,7 +24,7 @@ pairs = [
 ]
 
 # -----------------------------
-# محاسبه EMA50 بدون pandas
+# EMA50 ساده
 # -----------------------------
 def ema50(prices):
     k = 2 / 51
@@ -39,6 +39,11 @@ def ema50(prices):
 timeframes = ["5min", "15min"]
 
 # -----------------------------
+# حافظه داخلی برای جلوگیری از پیام تکراری
+# -----------------------------
+last_touch = {}  # کلید: symbol+tf, value: True/False
+
+# -----------------------------
 # پردازش هر ارز و تایم فریم
 # -----------------------------
 for symbol in pairs:
@@ -48,31 +53,34 @@ for symbol in pairs:
             res = requests.get(url, timeout=10).json()
             data = res["data"]
 
-            closes = [float(c[2]) for c in data]   # close
-            highs  = [float(c[3]) for c in data]   # high
-            lows   = [float(c[4]) for c in data]   # low
+            closes = [float(c[2]) for c in data]
+            highs  = [float(c[3]) for c in data]
+            lows   = [float(c[4]) for c in data]
 
             ema = ema50(closes)
             last_close = closes[-1]
             last_high = highs[-1]
             last_low = lows[-1]
-
-            # -------------------------
-            # اگر قیمت **به EMA برخورد کرده باشد**:
-            # 1) کلوز بالای EMA باشد
-            # 2) shadow شامل EMA باشد
-            # 3) یا EMA بین close قبلی و آخر باشد
-            # -------------------------
             prev_close = closes[-2]
-            touched = False
 
+            # -------------------------
+            # بررسی برخورد با EMA (shadow یا close crossing)
+            # -------------------------
+            touched = False
+            # shadow یا close touch
             if last_low <= ema <= last_high:
                 touched = True
             elif (prev_close - ema) * (last_close - ema) <= 0:
                 touched = True
 
-            if touched:
+            # کلید حافظه: ارز+تایم فریم
+            key = f"{symbol}_{tf}"
+
+            if touched and not last_touch.get(key, False):
                 send_telegram(f"⚡ برخورد با EMA50\n{symbol.upper()} | تایم فریم: {tf}\nClose: {last_close}")
+                last_touch[key] = True
+            elif not touched:
+                last_touch[key] = False
 
         except Exception as e:
             print("ERROR:", symbol, tf, e)
