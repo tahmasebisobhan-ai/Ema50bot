@@ -18,9 +18,9 @@ def send_telegram(msg):
 # لیست ارزهای مورد نظر
 # -----------------------------
 pairs = [
-    "btcusdt", "ethusdt", "solusdt", "ltcusdt", "avaxusdt",
-    "adausdt", "ensusdt", "xrpusdt", "algousdt",
-    "etcusdt", "suiusdt", "linkusdt"
+    "BTCUSDT", "ETHUSDT", "SOLUSDT", "LTCUSDT", "AVAXUSDT",
+    "ADAUSDT", "ENSUSDT", "XRPUSDT", "ALGOUSDT",
+    "ETCUSDT", "SUIUSDT", "LINKUSDT"
 ]
 
 # -----------------------------
